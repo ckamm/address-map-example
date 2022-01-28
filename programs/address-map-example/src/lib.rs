@@ -1,10 +1,12 @@
 use anchor_lang::prelude::*;
+use solana_program::slot_history::Slot;
 use error::*;
 use instructions::*;
 use state::*;
 
 mod error;
 mod instructions;
+pub mod solana_address_lookup_table_instruction;
 pub mod state;
 
 #[macro_use]
@@ -17,7 +19,11 @@ declare_id!("4Q6WW2ouZ6V3iaNm56MTd5n2tnTm4C5fiH8miFHnAFHo");
 pub mod address_map_example {
     use super::*;
 
-    pub fn register(ctx: Context<Register>, bump: u8) -> Result<()> {
-        instructions::register(ctx, bump)
+    pub fn register(ctx: Context<Register>, bump: u8, recent_slot: Slot) -> Result<()> {
+        instructions::register(ctx, bump, recent_slot)
+    }
+
+    pub fn balance(ctx: Context<Balance>) -> Result<()> {
+        instructions::balance(ctx)
     }
 }

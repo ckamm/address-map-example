@@ -8,6 +8,7 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
+use solana_runtime::bank::Bank;
 use spl_token::{state::*, *};
 
 pub use cookies::*;
@@ -66,9 +67,8 @@ impl Log for LoggerWrapper {
 }
 
 pub struct TestContext {
+    pub program_id: Pubkey,
     pub solana: Arc<SolanaCookie>,
-    pub governance: GovernanceCookie,
-    pub addin: AddinCookie,
     pub mints: Vec<MintCookie>,
     pub users: Vec<UserCookie>,
     pub quote_index: usize,
@@ -91,23 +91,15 @@ impl TestContext {
             program_log: program_log_capture.clone(),
         }));
 
-        let addin_program_id = voter_stake_registry::id();
+        let program_id = address_map_example::id();
 
         let mut test = ProgramTest::new(
-            "voter_stake_registry",
-            addin_program_id,
-            processor!(voter_stake_registry::entry),
+            "address_map_example",
+            program_id,
+            processor!(address_map_example::entry),
         );
         // intentionally set to half the limit, to catch potential problems early
         test.set_bpf_compute_max_units(110000);
-
-        let governance_program_id =
-            Pubkey::from_str(&"GovernanceProgramTest1111111111111111111111").unwrap();
-        test.add_program(
-            "spl_governance",
-            governance_program_id,
-            processor!(spl_governance::processor::process_instruction),
-        );
 
         // Setup the environment
 
@@ -206,15 +198,8 @@ impl TestContext {
         });
 
         TestContext {
+            program_id,
             solana: solana.clone(),
-            governance: GovernanceCookie {
-                solana: solana.clone(),
-                program_id: governance_program_id,
-            },
-            addin: AddinCookie {
-                solana: solana.clone(),
-                program_id: addin_program_id,
-            },
             mints,
             users,
             quote_index,

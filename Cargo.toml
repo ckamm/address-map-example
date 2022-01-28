@@ -2,3 +2,9 @@
 members = [
     "programs/*"
 ]
+
+#[patch.crates-io]
+#solana-runtime = { path = "../solana/runtime" }
+#solana-program = { path = "../solana/sdk/program" }
+#solana-sdk = { path = "../solana/sdk" }
+#solana-program-test = { path = "../solana/program-test" }

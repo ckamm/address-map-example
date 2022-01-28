@@ -1,195 +1,68 @@
 use anchor_spl::token::TokenAccount;
 use solana_program_test::*;
-use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError};
+use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError, pubkey::Pubkey};
 use std::borrow::BorrowMut;
-
 use program_test::*;
-use voter_stake_registry::state::Voter;
+use solana_program::instruction::Instruction;
+use address_map_example::solana_address_lookup_table_instruction as solana_address_lookup_table_instruction;
 
 mod program_test;
+
+async fn register(context: &TestContext, user: &Keypair, mint: Pubkey, token_account: Pubkey)
+    -> Result<(), TransportError> {
+    let (registrar, bump) = Pubkey::find_program_address(
+        &[
+            b"registrar".as_ref(),
+            &user.pubkey().to_bytes(),
+            &mint.to_bytes(),
+        ],
+        &context.program_id,
+    );
+    let recent_slot = 0;
+    let address_map = solana_address_lookup_table_instruction::derive_lookup_table_address(&registrar, recent_slot).0;
+
+    let data = anchor_lang::InstructionData::data(
+        &address_map_example::instruction::Register {
+            bump,
+            recent_slot,
+        },
+    );
+
+    let accounts = anchor_lang::ToAccountMetas::to_account_metas(
+        &address_map_example::accounts::Register {
+            registrar,
+            address_map,
+            user: user.pubkey(),
+            token_account,
+            system_program: solana_sdk::system_program::id(),
+            rent: solana_program::sysvar::rent::id(),
+            address_lookup_table: solana_address_lookup_table_instruction::id(),
+        },
+        None,
+    );
+
+    let instructions = vec![Instruction {
+        program_id: context.program_id,
+        accounts,
+        data,
+    }];
+
+    // clone the secrets
+    let signer = Keypair::from_base58_string(&user.to_base58_string());
+
+    context.solana
+        .process_transaction(&instructions, Some(&[&signer]))
+        .await
+}
 
 #[allow(unaligned_references)]
 #[tokio::test]
 async fn test_basic() -> Result<(), TransportError> {
     let context = TestContext::new().await;
-
     let payer = &context.users[0].key;
-    let realm_authority = Keypair::new();
-    let realm = context
-        .governance
-        .create_realm(
-            "testrealm",
-            realm_authority.pubkey(),
-            &context.mints[0],
-            &payer,
-            &context.addin.program_id,
-        )
-        .await;
+    let mint = context.mints[0].pubkey.unwrap();
 
-    let voter_authority = &context.users[1].key;
-    let token_owner_record = realm
-        .create_token_owner_record(voter_authority.pubkey(), &payer)
-        .await;
-
-    let registrar = context
-        .addin
-        .create_registrar(&realm, &realm_authority, payer)
-        .await;
-    context
-        .addin
-        .configure_voting_mint(
-            &registrar,
-            &realm_authority,
-            payer,
-            0,
-            &context.mints[0],
-            10,
-            0.0,
-            0.0,
-            1,
-            None,
-        )
-        .await;
-    let mngo_voting_mint = context
-        .addin
-        .configure_voting_mint(
-            &registrar,
-            &realm_authority,
-            payer,
-            0,
-            &context.mints[0],
-            0,
-            1.0,
-            0.0,
-            5 * 365 * 24 * 60 * 60,
-            None,
-        )
-        .await;
-
-    let voter = context
-        .addin
-        .create_voter(&registrar, &token_owner_record, &voter_authority, &payer)
-        .await;
-
-    // create the voter again, should have no effect
-    context
-        .addin
-        .create_voter(&registrar, &token_owner_record, &voter_authority, &payer)
-        .await;
-
-    // test deposit and withdraw
-
-    let reference_account = context.users[1].token_accounts[0];
-    let reference_initial = context
-        .solana
-        .token_account_balance(reference_account)
-        .await;
-    let balance_initial = voter.deposit_amount(&context.solana, 0).await;
-    assert_eq!(balance_initial, 0);
-
-    context
-        .addin
-        .create_deposit_entry(
-            &registrar,
-            &voter,
-            voter_authority,
-            &mngo_voting_mint,
-            0,
-            voter_stake_registry::state::LockupKind::Cliff,
-            None,
-            0,
-            false,
-        )
-        .await?;
-    context
-        .addin
-        .deposit(
-            &registrar,
-            &voter,
-            &mngo_voting_mint,
-            &voter_authority,
-            reference_account,
-            0,
-            10000,
-        )
-        .await?;
-
-    let reference_after_deposit = context
-        .solana
-        .token_account_balance(reference_account)
-        .await;
-    assert_eq!(reference_initial, reference_after_deposit + 10000);
-    let vault_after_deposit = mngo_voting_mint
-        .vault_balance(&context.solana, &voter)
-        .await;
-    assert_eq!(vault_after_deposit, 10000);
-    let balance_after_deposit = voter.deposit_amount(&context.solana, 0).await;
-    assert_eq!(balance_after_deposit, 10000);
-
-    context
-        .addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &mngo_voting_mint,
-            &&context.users[2].key,
-            reference_account,
-            0,
-            10000,
-        )
-        .await
-        .expect_err("fails because voter_authority is invalid");
-
-    context
-        .addin
-        .withdraw(
-            &registrar,
-            &voter,
-            &mngo_voting_mint,
-            &voter_authority,
-            reference_account,
-            0,
-            10000,
-        )
-        .await?;
-
-    let reference_after_withdraw = context
-        .solana
-        .token_account_balance(reference_account)
-        .await;
-    assert_eq!(reference_initial, reference_after_withdraw);
-    let vault_after_withdraw = mngo_voting_mint
-        .vault_balance(&context.solana, &voter)
-        .await;
-    assert_eq!(vault_after_withdraw, 0);
-    let balance_after_withdraw = voter.deposit_amount(&context.solana, 0).await;
-    assert_eq!(balance_after_withdraw, 0);
-
-    let lamports_before = context
-        .solana
-        .context
-        .borrow_mut()
-        .banks_client
-        .get_balance(voter_authority.pubkey())
-        .await?;
-    context
-        .addin
-        .close_voter(&registrar, &voter, &mngo_voting_mint, &voter_authority)
-        .await?;
-    let lamports_after = context
-        .solana
-        .context
-        .borrow_mut()
-        .banks_client
-        .get_balance(voter_authority.pubkey())
-        .await?;
-    let token_rent = context.solana.rent.minimum_balance(TokenAccount::LEN);
-    let voter_rent = context
-        .solana
-        .rent
-        .minimum_balance(std::mem::size_of::<Voter>());
-    let tolerance = 60_000;
-    assert!(lamports_after > lamports_before + voter_rent + token_rent - tolerance);
+    register(&context, &context.users[1].key, mint, context.users[1].token_accounts[0]).await.unwrap();
 
     Ok(())
 }

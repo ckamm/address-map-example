@@ -55,6 +55,7 @@ impl SolanaCookie {
             .await
     }
 
+    /*
     pub async fn get_clock(&self) -> solana_program::clock::Clock {
         self.context
             .borrow_mut()
@@ -72,6 +73,7 @@ impl SolanaCookie {
             .warp_to_slot(clock.slot + slots)
             .unwrap();
     }
+    */
 
     #[allow(dead_code)]
     pub async fn create_token_account(&self, owner: &Pubkey, mint: Pubkey) -> Pubkey {
