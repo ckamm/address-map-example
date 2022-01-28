@@ -1,0 +1,41 @@
+[package]
+name = "address-map-example"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "address_map_example"
+doctest = false
+
+[features]
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+default = []
+localnet = []
+test-bpf = []
+
+[dependencies]
+# a) for deployment use these
+anchor-lang = "0.20.1"
+anchor-spl = { version = "0.20.1", features = ["governance"]}
+# b) while testing, use below dependencies for debugging instead of above ones
+# anchor-lang = { git = "https://github.com/microwavedcola1/anchor.git", branch = "master-debug" }
+# anchor-spl = { git = "https://github.com/microwavedcola1/anchor.git", branch = "master-debug", features = ["governance"]}
+
+# refer solana to the same version anchor-lang 0.20.1 refers to
+solana-program = "~1.9.0"
+solana-address-lookup-table-program = "~1.9.0"
+static_assertions = "1.1"
+
+[dev-dependencies]
+solana-sdk = "~1.9.0"
+solana-program-test = "~1.9.0"
+solana-logger = "~1.9.0"
+bytemuck = "^1.7.2"
+serde = "^1.0"
+bincode = "^1.3.1"
+log = "0.4.14"
+env_logger = "0.9.0"
+base64 = "0.13.0"
