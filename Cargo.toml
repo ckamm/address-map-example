@@ -3,8 +3,8 @@ members = [
     "programs/*"
 ]
 
-#[patch.crates-io]
-#solana-runtime = { path = "../solana/runtime" }
-#solana-program = { path = "../solana/sdk/program" }
-#solana-sdk = { path = "../solana/sdk" }
-#solana-program-test = { path = "../solana/program-test" }
+[patch.crates-io]
+solana-runtime = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }
+solana-program = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }
+solana-program-test = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }
+solana-sdk = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }

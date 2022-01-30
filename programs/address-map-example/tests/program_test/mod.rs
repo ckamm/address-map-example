@@ -77,7 +77,7 @@ pub struct TestContext {
 impl TestContext {
     pub async fn new() -> Self {
         // We need to intercept logs to capture program log output
-        let log_filter = "solana_rbpf=trace,\
+        let log_filter = "info,solana_rbpf=trace,\
                     solana_runtime::message_processor=debug,\
                     solana_runtime::system_instruction_processor=trace,\
                     solana_program_test=info";

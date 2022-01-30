@@ -1,6 +1,6 @@
 use anchor_spl::token::TokenAccount;
 use solana_program_test::*;
-use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError, pubkey::Pubkey};
+use solana_sdk::{signature::Keypair, signer::Signer, transport::TransportError, pubkey::Pubkey, message::v0::AddressLookupTable};
 use std::borrow::BorrowMut;
 use program_test::*;
 use solana_program::instruction::Instruction;
@@ -9,7 +9,7 @@ use address_map_example::solana_address_lookup_table_instruction as solana_addre
 mod program_test;
 
 async fn register(context: &TestContext, user: &Keypair, mint: Pubkey, token_account: Pubkey)
-    -> Result<(), TransportError> {
+    -> Result<(Pubkey, Pubkey), TransportError> {
     let (registrar, bump) = Pubkey::find_program_address(
         &[
             b"registrar".as_ref(),
@@ -51,7 +51,41 @@ async fn register(context: &TestContext, user: &Keypair, mint: Pubkey, token_acc
     let signer = Keypair::from_base58_string(&user.to_base58_string());
 
     context.solana
-        .process_transaction(&instructions, Some(&[&signer]))
+        .process_versioned_transaction(&instructions, Some(&[&signer]), None)
+        .await?;
+
+    Ok((registrar, address_map))
+}
+
+async fn balance(context: &TestContext, address_map: Pubkey, address_map_addresses: Vec<Pubkey>)
+    -> Result<(), TransportError> {
+    let data = anchor_lang::InstructionData::data(
+        &address_map_example::instruction::Balance {
+        },
+    );
+
+    let mut accounts = anchor_lang::ToAccountMetas::to_account_metas(
+        &address_map_example::accounts::Balance {
+        },
+        None,
+    );
+    for key in &address_map_addresses {
+        accounts.push(anchor_lang::prelude::AccountMeta::new_readonly(*key, false));
+    }
+
+    let instructions = vec![Instruction {
+        program_id: context.program_id,
+        accounts,
+        data,
+    }];
+
+    let address_lookup_table = AddressLookupTable {
+        account_key: address_map,
+        addresses: address_map_addresses,
+    };
+
+    context.solana
+        .process_versioned_transaction(&instructions, None, Some(&vec![address_lookup_table]))
         .await
 }
 
@@ -61,8 +95,17 @@ async fn test_basic() -> Result<(), TransportError> {
     let context = TestContext::new().await;
     let payer = &context.users[0].key;
     let mint = context.mints[0].pubkey.unwrap();
+    let token1 = context.users[1].token_accounts[0];
+    let token2 = context.users[2].token_accounts[0];
 
-    register(&context, &context.users[1].key, mint, context.users[1].token_accounts[0]).await.unwrap();
+    let (registrar, address_map) = register(&context, &context.users[1].key, mint, token1).await.unwrap();
+    // required to make the address map change live
+    context.solana.advance_clock_by_slots(5).await;
+    balance(&context, address_map, vec![token1]).await.unwrap();
+
+    register(&context, &context.users[1].key, mint, token2).await.unwrap();
+    context.solana.advance_clock_by_slots(5).await;
+    balance(&context, address_map, vec![token1, token2]).await.unwrap();
 
     Ok(())
 }

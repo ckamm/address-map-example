@@ -10,8 +10,9 @@ use solana_sdk::{
     instruction::Instruction,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
-    transaction::Transaction,
+    transaction::{Transaction, VersionedTransaction},
     transport::TransportError,
+    message::v0::AddressLookupTable,
 };
 use spl_token::*;
 
@@ -55,12 +56,46 @@ impl SolanaCookie {
             .await
     }
 
-    /*
+    #[allow(dead_code)]
+    pub async fn process_versioned_transaction(
+        &self,
+        instructions: &[Instruction],
+        signers: Option<&[&Keypair]>,
+        address_lookup_tables: Option<&[AddressLookupTable]>,
+    ) -> Result<(), TransportError> {
+        self.program_log.write().unwrap().clear();
+
+        let mut context = self.context.borrow_mut();
+
+        let mut transaction =
+            VersionedTransaction::new_with_payer(&instructions, Some(&context.payer.pubkey()), address_lookup_tables);
+
+        let mut all_signers = vec![&context.payer];
+
+        if let Some(signers) = signers {
+            all_signers.extend_from_slice(signers);
+        }
+
+        // This fails when warping is involved - https://gitmemory.com/issue/solana-labs/solana/18201/868325078
+        // let recent_blockhash = self.context.banks_client.get_recent_blockhash().await.unwrap();
+
+        transaction.sign(&all_signers, context.last_blockhash);
+
+        println!("sending");
+        context
+            .banks_client
+            .process_versioned_transaction_with_commitment(
+                transaction,
+                solana_sdk::commitment_config::CommitmentLevel::Processed,
+            )
+            .await
+    }
+
     pub async fn get_clock(&self) -> solana_program::clock::Clock {
         self.context
             .borrow_mut()
             .banks_client
-            .get_clock()
+            .get_sysvar::<solana_program::clock::Clock>()
             .await
             .unwrap()
     }
@@ -73,7 +108,6 @@ impl SolanaCookie {
             .warp_to_slot(clock.slot + slots)
             .unwrap();
     }
-    */
 
     #[allow(dead_code)]
     pub async fn create_token_account(&self, owner: &Pubkey, mint: Pubkey) -> Pubkey {
