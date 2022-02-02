@@ -1,9 +1,8 @@
 use crate::error::*;
+use crate::solana_address_lookup_table_instruction;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
-use std::mem::size_of;
-use crate::solana_address_lookup_table_instruction as solana_address_lookup_table_instruction;
 use solana_program::slot_history::Slot;
 
 #[derive(Accounts)]
@@ -82,7 +81,10 @@ pub fn register(ctx: Context<Register>, bump: u8, recent_slot: Slot) -> Result<(
     } else {
         let registrar = ctx.accounts.registrar.load()?;
         require!(registrar.mint == ctx.accounts.token_account.mint, Invalid);
-        require!(registrar.address_map == ctx.accounts.address_map.key(), Invalid);
+        require!(
+            registrar.address_map == ctx.accounts.address_map.key(),
+            Invalid
+        );
         registrar
     };
 
@@ -90,7 +92,11 @@ pub fn register(ctx: Context<Register>, bump: u8, recent_slot: Slot) -> Result<(
 
     // extend address map with new account
     let instruction = solana_address_lookup_table_instruction::extend_lookup_table(
-        registrar.address_map, registrar_address, user_address, vec![ctx.accounts.token_account.key()]);
+        registrar.address_map,
+        registrar_address,
+        user_address,
+        vec![ctx.accounts.token_account.key()],
+    );
     let account_infos = [
         ctx.accounts.address_map.to_account_info(),
         ctx.accounts.registrar.to_account_info(),

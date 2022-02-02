@@ -1,6 +1,6 @@
 use log::*;
 use std::cell::RefCell;
-use std::{str::FromStr, sync::Arc, sync::RwLock};
+use std::{sync::Arc, sync::RwLock};
 
 use solana_program::{program_option::COption, program_pack::Pack};
 use solana_program_test::*;
@@ -8,7 +8,6 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
-use solana_runtime::bank::Bank;
 use spl_token::{state::*, *};
 
 pub use cookies::*;
@@ -77,10 +76,11 @@ pub struct TestContext {
 impl TestContext {
     pub async fn new() -> Self {
         // We need to intercept logs to capture program log output
-        let log_filter = "info,solana_rbpf=trace,\
+        let log_filter = "warn,solana_rbpf=trace,\
                     solana_runtime::message_processor=debug,\
                     solana_runtime::system_instruction_processor=trace,\
-                    solana_program_test=info";
+                    solana_program_test=info,\
+                    tarpc::client=error";
         let env_logger =
             env_logger::Builder::from_env(env_logger::Env::new().default_filter_or(log_filter))
                 .format_timestamp_nanos()
@@ -99,7 +99,7 @@ impl TestContext {
             processor!(address_map_example::entry),
         );
         // intentionally set to half the limit, to catch potential problems early
-        test.set_bpf_compute_max_units(110000);
+        test.set_compute_max_units(110000);
 
         // Setup the environment
 

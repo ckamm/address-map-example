@@ -1,5 +1,5 @@
-pub use register::*;
 pub use balance::*;
+pub use register::*;
 
-mod register;
 mod balance;
+mod register;

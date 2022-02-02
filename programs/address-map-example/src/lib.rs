@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
-use solana_program::slot_history::Slot;
 use error::*;
 use instructions::*;
-use state::*;
+use solana_program::slot_history::Slot;
 
 mod error;
 mod instructions;
@@ -23,7 +22,7 @@ pub mod address_map_example {
         instructions::register(ctx, bump, recent_slot)
     }
 
-    pub fn balance(ctx: Context<Balance>) -> Result<()> {
-        instructions::balance(ctx)
+    pub fn balance(ctx: Context<Balance>, expected: u64) -> Result<()> {
+        instructions::balance(ctx, expected)
     }
 }

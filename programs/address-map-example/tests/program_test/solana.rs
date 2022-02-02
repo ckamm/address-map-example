@@ -8,11 +8,14 @@ use solana_program_test::*;
 use solana_sdk::{
     account::ReadableAccount,
     instruction::Instruction,
+    message::{
+        v0::{AddressLookupTable, Message},
+        VersionedMessage,
+    },
     pubkey::Pubkey,
     signature::{Keypair, Signer},
     transaction::{Transaction, VersionedTransaction},
     transport::TransportError,
-    message::v0::AddressLookupTable,
 };
 use spl_token::*;
 
@@ -54,6 +57,7 @@ impl SolanaCookie {
                 solana_sdk::commitment_config::CommitmentLevel::Processed,
             )
             .await
+            .map_err(|e| e.into())
     }
 
     #[allow(dead_code)]
@@ -67,21 +71,20 @@ impl SolanaCookie {
 
         let mut context = self.context.borrow_mut();
 
-        let mut transaction =
-            VersionedTransaction::new_with_payer(&instructions, Some(&context.payer.pubkey()), address_lookup_tables);
+        let message = VersionedMessage::V0(Message::new_with_blockhash(
+            &instructions,
+            Some(&context.payer.pubkey()),
+            address_lookup_tables,
+            &context.last_blockhash,
+        ));
 
         let mut all_signers = vec![&context.payer];
-
         if let Some(signers) = signers {
             all_signers.extend_from_slice(signers);
         }
 
-        // This fails when warping is involved - https://gitmemory.com/issue/solana-labs/solana/18201/868325078
-        // let recent_blockhash = self.context.banks_client.get_recent_blockhash().await.unwrap();
+        let transaction = VersionedTransaction::try_new(message, &all_signers).unwrap();
 
-        transaction.sign(&all_signers, context.last_blockhash);
-
-        println!("sending");
         context
             .banks_client
             .process_versioned_transaction_with_commitment(
@@ -89,6 +92,7 @@ impl SolanaCookie {
                 solana_sdk::commitment_config::CommitmentLevel::Processed,
             )
             .await
+            .map_err(|e| e.into())
     }
 
     pub async fn get_clock(&self) -> solana_program::clock::Clock {

@@ -24,22 +24,22 @@ anchor-spl = { version = "0.20.1", features = ["governance"]}
 # anchor-lang = { git = "https://github.com/microwavedcola1/anchor.git", branch = "master-debug" }
 # anchor-spl = { git = "https://github.com/microwavedcola1/anchor.git", branch = "master-debug", features = ["governance"]}
 
-solana-program = "~1.9.0"
-solana-sdk-macro = "~1.9.0"
+solana-program = "1.9.0"
+solana-sdk-macro = "1.9.0"
 static_assertions = "1.1"
 
 # I don't know what's up, but when I depend on this the build breaks :(
 # Probably because it depends on solana-sdk...
 # Hence I made a copy of the instruction.rs file.
-#solana-address-lookup-table-program = "~1.9.0"
+#solana-address-lookup-table-program = "1.10.0"
 
 serde = "^1.0"
 
 [dev-dependencies]
-solana-sdk = "~1.9.0"
-solana-runtime = "~1.9.0"
-solana-program-test = "~1.9.0"
-solana-logger = "~1.9.0"
+solana-sdk = "1.9.0"
+solana-runtime = "1.9.0"
+solana-program-test = "1.9.0"
+solana-logger = "1.9.0"
 spl-token = { version = "^3.0.0", features = ["no-entrypoint"] }
 spl-associated-token-account = { version = "^1.0.3", features = ["no-entrypoint"] }
 bytemuck = "^1.7.2"

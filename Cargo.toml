@@ -4,7 +4,13 @@ members = [
 ]
 
 [patch.crates-io]
-solana-runtime = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }
-solana-program = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }
-solana-program-test = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }
-solana-sdk = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/test-versioned-transaction" }
+# Currently a patched version of solana is needed to send new-style transactions in tests
+solana-runtime = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/versioned-transaction" }
+solana-program = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/versioned-transaction" }
+solana-program-test = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/versioned-transaction" }
+solana-sdk = { git = "https://github.com/ckamm/solana.git", branch = "ckamm/versioned-transaction" }
+
+#solana-runtime = { path = "../solana/runtime" }
+#solana-program = { path = "../solana/sdk/program" }
+#solana-program-test = { path = "../solana/program-test" }
+#solana-sdk = { path = "../solana/sdk" }
